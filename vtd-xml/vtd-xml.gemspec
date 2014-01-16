@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.summary   = %q{I like VTD-XML so I use this instead of standard XML parsers}
   spec.homepage      = "https://github.com/arielvalentin/vtd-xml-ruby"
   spec.license       = "MIT"
-
+  spec.platform      = 'java'
   spec.files         =  Dir["**/*"].reject{ |path| path[%r{vendor|puppet}] }
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
