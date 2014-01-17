@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'vtd_xml/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "vtd-xml"
+  spec.name          = "vtd_xml"
   spec.version       = VtdXml::VERSION
   spec.authors       = ["Ariel S. Valentin", "Ryan A. Marone", "Ashraf M. Hanafy"]
   spec.email         = ["ariel@arielvalentin.com", "ashes42@gmail.com"]
