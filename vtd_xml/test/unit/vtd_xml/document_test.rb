@@ -247,6 +247,7 @@ the contents
   the contents
   <boo:bam boo:zing="blamo">
   </boo:bam>
+  <boo:biz/>
   other contents
   <boo:sam>I am</boo:sam>
 </boo:root>
@@ -265,6 +266,7 @@ the contents
   the contents
   <boo:bam boo:zing="blamo">
   </boo:bam>
+  <boo:biz/>
   other contents
   <boo:sam>I am</boo:sam>
   <boo:wow>That's got to hurt</boo:wow>
@@ -283,6 +285,7 @@ EOF
   the contents
   <boo:bam boo:zing="blamo">
   </boo:bam>
+  <boo:biz/>
   other contents
   <boo:sam>I am<boo:wow>That's got to hurt</boo:wow>
   </boo:sam>
@@ -302,6 +305,27 @@ EOF
   <boo:bam boo:zing="blamo">
     <boo:wow>That's got to hurt</boo:wow>
   </boo:bam>
+  <boo:biz/>
+  other contents
+  <boo:sam>I am</boo:sam>
+</boo:root>
+EOF
+        assert_equal(expected_xml, @document.to_xml)
+      end
+
+      should 'insert a child node under specified xpath when no interior exists' do
+        xpath = '//boo:biz'
+        @document.add_child(xpath, "\n    <boo:wow>That's got to hurt</boo:wow>\n  ", @namespaces)
+
+        expected_xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com">
+  the contents
+  <boo:bam boo:zing="blamo">
+  </boo:bam>
+  <boo:biz>
+    <boo:wow>That's got to hurt</boo:wow>
+  </boo:biz>
   other contents
   <boo:sam>I am</boo:sam>
 </boo:root>
