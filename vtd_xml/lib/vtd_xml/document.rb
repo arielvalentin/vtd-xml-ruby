@@ -61,8 +61,9 @@ module VtdXml
       current_last_node = ''
       register_namespaces(namespaces)
       @pilot.select_xpath(xpath)
-      found = @pilot.eval_xpath()
-      @modifier.insert_before_tail(xml) 
+      found = @pilot.eval_xpath() != -1
+      @modifier.insert_before_tail(xml) if found 
+      found
     rescue XPathParseException => e
       raise XPathError, e.message
     rescue Java::ComXimpleware::ModifyException => e

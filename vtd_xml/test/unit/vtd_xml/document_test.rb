@@ -241,7 +241,7 @@ the contents
 
     context 'adding a child node' do
       setup do
-        xml = <<-EOF
+        @xml = <<-EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <boo:root xmlns:boo="boo.com">
   the contents
@@ -253,7 +253,7 @@ the contents
 </boo:root>
         EOF
         @namespaces = {boo: 'boo.com'}
-        @document = Document.new(xml)
+        @document = Document.new(@xml)
       end
 
       should 'insert under a specified xpath when nodes exist' do
@@ -331,6 +331,12 @@ EOF
 </boo:root>
 EOF
         assert_equal(expected_xml, @document.to_xml)
+      end
+
+      should 'insert under a non_existant xpath' do
+        xpath = '//boo:not_an_xpath_waaaaaagh'
+        refute(@document.add_child(xpath, "\n    <boo:wow>That's got to hurt</boo:wow>\n  ", @namespaces))
+        assert_equal(@xml, @document.to_xml)
       end
     end
 
