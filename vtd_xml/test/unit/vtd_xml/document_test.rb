@@ -117,7 +117,7 @@ the contents
 
     end
 
-    context 'add XML node' do
+    context 'add XML sibling node' do
       setup do
         xml = <<-EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -236,6 +236,77 @@ the contents
         end
 
         assert_equal('No URL found for prefix:boo', e.message)
+      end
+    end
+
+    context 'adding a child node' do
+      setup do
+        xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com">
+  the contents
+  <boo:bam boo:zing="blamo">
+  </boo:bam>
+  other contents
+  <boo:sam>I am</boo:sam>
+</boo:root>
+        EOF
+        @namespaces = {boo: 'boo.com'}
+        @document = Document.new(xml)
+      end
+
+      should 'insert under a specified xpath when nodes exist' do
+        xpath = '//boo:root'
+        @document.add_child(xpath, "  <boo:wow>That's got to hurt</boo:wow>\n", @namespaces)
+
+        expected_xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com">
+  the contents
+  <boo:bam boo:zing="blamo">
+  </boo:bam>
+  other contents
+  <boo:sam>I am</boo:sam>
+  <boo:wow>That's got to hurt</boo:wow>
+</boo:root>
+EOF
+        assert_equal(expected_xml, @document.to_xml)
+      end
+
+      should 'insert a child node under specified xpath when only text exist' do
+        xpath = '//boo:sam'
+        @document.add_child(xpath, "<boo:wow>That's got to hurt</boo:wow>\n  ", @namespaces)
+
+        expected_xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com">
+  the contents
+  <boo:bam boo:zing="blamo">
+  </boo:bam>
+  other contents
+  <boo:sam>I am<boo:wow>That's got to hurt</boo:wow>
+  </boo:sam>
+</boo:root>
+EOF
+        assert_equal(expected_xml, @document.to_xml)
+      end
+
+      should 'insert a child node under specified xpath when no nodes exist' do
+        xpath = '//boo:bam[@boo:zing="blamo"]'
+        @document.add_child(xpath, "  <boo:wow>That's got to hurt</boo:wow>\n  ", @namespaces)
+
+        expected_xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com">
+  the contents
+  <boo:bam boo:zing="blamo">
+    <boo:wow>That's got to hurt</boo:wow>
+  </boo:bam>
+  other contents
+  <boo:sam>I am</boo:sam>
+</boo:root>
+EOF
+        assert_equal(expected_xml, @document.to_xml)
       end
     end
 

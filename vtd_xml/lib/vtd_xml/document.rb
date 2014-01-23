@@ -57,6 +57,21 @@ module VtdXml
       clear_xpath_namespaces
     end
 
+    def add_child(xpath, xml, namespaces = {})
+      current_last_node = ''
+      register_namespaces(namespaces)
+      @pilot.select_xpath(xpath)
+      found = @pilot.eval_xpath()
+      @modifier.insert_before_tail(xml) 
+    rescue XPathParseException => e
+      raise XPathError, e.message
+    rescue Java::ComXimpleware::ModifyException => e
+      raise ModifyError, e.message
+    ensure
+      @pilot.reset_xpath
+      clear_xpath_namespaces
+    end
+
     def select_node(xpath, namespaces={})
       register_namespaces(namespaces)
       @pilot.select_xpath(xpath)
