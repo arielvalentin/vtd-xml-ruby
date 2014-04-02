@@ -60,7 +60,7 @@ the contents
 
       should 'parse xml without qualified namespaces' do
         @document = Document.new('<?xml version="1.0" encoding="UTF-8"?><boo>dsds</boo>')
-        assert_equal(%w(dsds), @document.xpath('/boo').map(&:to_string))
+        assert_equal(%w(dsds), @document.xpath('/boo').map(&:to_s))
       end
 
       should 'fail when contents are not provided' do
@@ -95,25 +95,25 @@ the contents
       end
 
       should 'extract string from root' do
-        assert_equal([''], @document.xpath('/', @namespaces).map(&:to_string))
+        assert_equal([''], @document.xpath('/', @namespaces).map(&:to_s))
       end
 
       should 'extract text from child text nodes' do
-        assert_equal(['the contents'], @document.xpath('/boo:root', @namespaces).map(&:to_string))
-        assert_equal(['the contents', 'other contents'], @document.xpath('/boo:root/text()', @namespaces).map(&:to_string))
+        assert_equal(['the contents'], @document.xpath('/boo:root', @namespaces).map(&:to_s))
+        assert_equal(['the contents', 'other contents'], @document.xpath('/boo:root/text()', @namespaces).map(&:to_s))
       end
 
       should 'extract string from element node containing only text' do
-        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam', @namespaces).map(&:to_string))
-        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam/text()', @namespaces).map(&:to_string))
+        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam', @namespaces).map(&:to_s))
+        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam/text()', @namespaces).map(&:to_s))
       end
 
       should 'extract string from attribute node' do
-        assert_equal(['blamo'], @document.xpath('/boo:root/boo:bam/@boo:zing', @namespaces).map(&:to_string))
+        assert_equal(['blamo'], @document.xpath('/boo:root/boo:bam/@boo:zing', @namespaces).map(&:to_s))
       end
 
       should 'extract multiple strings from multiple xpaths' do
-        assert_equal(['blamo', 'the contents'], @document.xpath('/boo:root/boo:bam/@boo:zing', '/boo:root', @namespaces).map(&:to_string))
+        assert_equal(['blamo', 'the contents'], @document.xpath('/boo:root/boo:bam/@boo:zing', '/boo:root', @namespaces).map(&:to_s))
       end
 
     end
@@ -144,8 +144,8 @@ the contents
         added_xml = "\n  <boo:bang>the big bang</boo:bang>"
         assert(@document.insert_after('/boo:root/boo:bam', added_xml, @namespaces), 'insert_after should return true')
         modified_document = Document.new(@document.to_xml)
-        assert_equal(['the big bang'], modified_document.xpath('/boo:root/boo:bang', @namespaces).map(&:to_string))
-        assert_equal(['right in the kisser'], modified_document.xpath('/boo:root/boo:bang/preceding-sibling::boo:bam', @namespaces).map(&:to_string))
+        assert_equal(['the big bang'], modified_document.xpath('/boo:root/boo:bang', @namespaces).map(&:to_s))
+        assert_equal(['right in the kisser'], modified_document.xpath('/boo:root/boo:bang/preceding-sibling::boo:bam', @namespaces).map(&:to_s))
 
         expected_xml = <<-EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -366,7 +366,32 @@ EOF
           found_attributes << node.xpath(sub_xpath, @namespaces)
         end
         found_attributes.flatten!
-        assert_equal(['foo', 'bar'], found_attributes.map(&:to_string))
+        assert_equal(['foo', 'bar'], found_attributes.map(&:to_s))
+      end
+    end
+
+    context 'removing a node' do
+      setup do
+        xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com" xmlns:zang="zang.com">
+  <boo:bam zang:zing="blamo">
+    <boo:target zang:zing="foo"/>
+  </boo:bam>
+</boo:root>
+        EOF
+        @namespaces = {:boo => 'boo.com', :zang => 'zang.com'}
+        @document = Document.new(xml)
+      end
+
+      should 'remove a node' do
+        top_xpath = '//boo:target'
+        nodes = @document.xpath(top_xpath, @namespaces)
+        nodes.each do |node|
+          node.remove
+        end
+
+        assert_no_match /boo:target/, @document.to_xml
       end
     end
 

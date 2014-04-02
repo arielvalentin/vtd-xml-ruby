@@ -1,24 +1,18 @@
 module VtdXml
 
-  class Document
+  module Navigation
     include_package 'com.ximpleware'
     include_package 'java.lang'
-    include_package 'java.io'
 
-    WITH_NAMESPACE_AWARE = true
+    def search(xpath)
+      @pilot.select_xpath(xpath)
 
-    def initialize(contents)
-      @generator = VTDGen.new
-      @generator.doc = contents.to_s.to_java_bytes
-      @generator.parse(WITH_NAMESPACE_AWARE)
+      results = []
+      while (result = @pilot.eval_xpath()) != -1
+        results << Node.new(result, @navigator, @pilot, @modifier)
+      end
 
-      @navigator = @generator.nav
-      @pilot = AutoPilot.new(@navigator)
-      @modifier = XMLModifier.new(@navigator)
-
-
-    rescue IllegalArgumentException, ParseException, EOFException => e
-      raise ParseError, e.message
+      results
     end
 
     def xpath(*xpaths)
@@ -40,6 +34,37 @@ module VtdXml
       namespaces.each do |prefix, url|
         @pilot.declare_xpath_name_space(prefix.to_s, url.to_s)
       end
+    end
+    def clear_xpath_namespaces
+      begin
+        @pilot.clear_xpath_name_spaces()
+      rescue NullPointerException
+      end
+    end
+
+  end
+
+
+  class Document
+    include_package 'com.ximpleware'
+    include_package 'java.lang'
+    include_package 'java.io'
+    include Navigation
+
+    WITH_NAMESPACE_AWARE = true
+
+    def initialize(contents)
+      @generator = VTDGen.new
+      @generator.doc = contents.to_s.to_java_bytes
+      @generator.parse(WITH_NAMESPACE_AWARE)
+
+      @navigator = @generator.nav
+      @pilot = AutoPilot.new(@navigator)
+      @modifier = XMLModifier.new(@navigator)
+
+
+    rescue IllegalArgumentException, ParseException, EOFException => e
+      raise ParseError, e.message
     end
 
     def insert_after(xpath, xml, namespaces = {})
@@ -97,29 +122,10 @@ module VtdXml
     def offset_and_length_for(fragment)
       return (fragment & 0b0000000000000000000000000000000011111111111111111111111111111111), (fragment >> 32)
     end
-
-    def search(xpath) 
-      @pilot.select_xpath(xpath)
-
-      results = []
-      while (result = @pilot.eval_xpath()) != -1
-        results << Node.new(result, @navigator, @pilot, @modifier)
-      end
-
-      results
-    ensure
-      @pilot.reset_xpath
-    end
-
-    def clear_xpath_namespaces
-      begin
-        @pilot.clear_xpath_name_spaces()
-      rescue NullPointerException
-      end
-    end
   end
 
   class Node
+    include Navigation
     include_package 'com.ximpleware'
 
     def initialize(start_index, navigator, pilot, modifier)
@@ -130,8 +136,13 @@ module VtdXml
       @text_for = text_for(start_index)
     end
 
-    def to_string
+    def to_s
       @text_for
+    end
+
+    def remove
+      @navigator.recover_node(@start_index)
+      @modifier.remove()
     end
 
     # Beware of TCO!
@@ -154,44 +165,8 @@ module VtdXml
 
     def search(xpath)
       @navigator.recover_node(@start_index)
-
-      @pilot.select_xpath(xpath)
-
-      results = []
-      while (result = @pilot.eval_xpath()) != -1
-        results << Node.new(result, @navigator, @pilot, @modifier)
-      end
-
-      results
+      super(xpath)
     end
-
-    def xpath(*xpaths)
-      namespaces = Hash === xpaths.last ? xpaths.pop : {}
-      register_namespaces(namespaces)
-
-      results = xpaths.map { |xpath| search(xpath) }
-      results.flatten!
-      results.compact!
-      results
-
-    rescue XPathParseException => e
-      raise XPathError, '%s for xpath: %s' % [e.message, xpaths.inspect]
-    ensure
-      clear_xpath_namespaces
-    end
-
-    def register_namespaces(namespaces)
-      namespaces.each do |prefix, url|
-        @pilot.declare_xpath_name_space(prefix.to_s, url.to_s)
-      end
-    end
-    def clear_xpath_namespaces
-      begin
-        @pilot.clear_xpath_name_spaces()
-      rescue NullPointerException
-      end
-    end
-
   end
 end
 
