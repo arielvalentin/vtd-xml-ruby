@@ -1,4 +1,5 @@
-require_relative '../../test_load_paths'
+#require_relative '../../test_load_paths'
+require File.expand_path('../../../test_load_paths', __FILE__)
 require 'vtd_xml'
 
 module VtdXml
@@ -59,7 +60,7 @@ the contents
 
       should 'parse xml without qualified namespaces' do
         @document = Document.new('<?xml version="1.0" encoding="UTF-8"?><boo>dsds</boo>')
-        assert_equal(%w(dsds), @document.xpath('/boo'))
+        assert_equal(%w(dsds), @document.xpath('/boo').map(&:to_string))
       end
 
       should 'fail when contents are not provided' do
@@ -89,30 +90,30 @@ the contents
   other contents
 </boo:root>
         EOF
-        @namespaces = {boo: 'boo.com'}
+        @namespaces = {:boo => 'boo.com'}
         @document = Document.new(xml)
       end
 
       should 'extract string from root' do
-        assert_equal([''], @document.xpath('/', @namespaces))
+        assert_equal([''], @document.xpath('/', @namespaces).map(&:to_string))
       end
 
       should 'extract text from child text nodes' do
-        assert_equal(['the contents'], @document.xpath('/boo:root', @namespaces))
-        assert_equal(['the contents', 'other contents'], @document.xpath('/boo:root/text()', @namespaces))
+        assert_equal(['the contents'], @document.xpath('/boo:root', @namespaces).map(&:to_string))
+        assert_equal(['the contents', 'other contents'], @document.xpath('/boo:root/text()', @namespaces).map(&:to_string))
       end
 
       should 'extract string from element node containing only text' do
-        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam', @namespaces))
-        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam/text()', @namespaces))
+        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam', @namespaces).map(&:to_string))
+        assert_equal(['right in the kisser'], @document.xpath('/boo:root/boo:bam/text()', @namespaces).map(&:to_string))
       end
 
       should 'extract string from attribute node' do
-        assert_equal(['blamo'], @document.xpath('/boo:root/boo:bam/@boo:zing', @namespaces))
+        assert_equal(['blamo'], @document.xpath('/boo:root/boo:bam/@boo:zing', @namespaces).map(&:to_string))
       end
 
       should 'extract multiple strings from multiple xpaths' do
-        assert_equal(['blamo', 'the contents'], @document.xpath('/boo:root/boo:bam/@boo:zing', '/boo:root', @namespaces))
+        assert_equal(['blamo', 'the contents'], @document.xpath('/boo:root/boo:bam/@boo:zing', '/boo:root', @namespaces).map(&:to_string))
       end
 
     end
@@ -130,21 +131,21 @@ the contents
   <boo:sam>I am</boo:sam>
 </boo:root>
         EOF
-        @namespaces = {boo: 'boo.com'}
+        @namespaces = {:boo => 'boo.com'}
         @document = Document.new(xml)
       end
 
       should 'return false if xpath to insert after was not found' do
         added_xml = '<boo:p>faa</boo:p>'
-        refute(@document.insert_after('/boo:root/boo:nothing', added_xml, @namespaces), 'insert_after should return false')
+        assert(!@document.insert_after('/boo:root/boo:nothing', added_xml, @namespaces), 'insert_after should return false')
       end
 
       should 'add an XML node after valid xpath' do
         added_xml = "\n  <boo:bang>the big bang</boo:bang>"
         assert(@document.insert_after('/boo:root/boo:bam', added_xml, @namespaces), 'insert_after should return true')
         modified_document = Document.new(@document.to_xml)
-        assert_equal(['the big bang'], modified_document.xpath('/boo:root/boo:bang', @namespaces))
-        assert_equal(['right in the kisser'], modified_document.xpath('/boo:root/boo:bang/preceding-sibling::boo:bam', @namespaces))
+        assert_equal(['the big bang'], modified_document.xpath('/boo:root/boo:bang', @namespaces).map(&:to_string))
+        assert_equal(['right in the kisser'], modified_document.xpath('/boo:root/boo:bang/preceding-sibling::boo:bam', @namespaces).map(&:to_string))
 
         expected_xml = <<-EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -201,7 +202,7 @@ the contents
         added_xml = "\n  <boo:bang>the big bang</boo:bang>"
         more_xml = "\n  <boo:zoo>zoom</boo:zoo>"
         @document.insert_after('/boo:root/boo:bam', added_xml, @namespaces)
-        assert(!@document.insert_after('/boo:root/boo:bang', more_xml, @namespaces))
+        assert (!@document.insert_after('/boo:root/boo:bang', more_xml, @namespaces))
 
         expected_xml = <<-EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -252,7 +253,7 @@ the contents
   <boo:sam>I am</boo:sam>
 </boo:root>
         EOF
-        @namespaces = {boo: 'boo.com'}
+        @namespaces = {:boo => 'boo.com'}
         @document = Document.new(@xml)
       end
 
@@ -335,8 +336,37 @@ EOF
 
       should 'insert under a non_existant xpath' do
         xpath = '//boo:not_an_xpath_waaaaaagh'
-        refute(@document.add_child(xpath, "\n    <boo:wow>That's got to hurt</boo:wow>\n  ", @namespaces))
+        assert (!@document.add_child(xpath, "\n    <boo:wow>That's got to hurt</boo:wow>\n  ", @namespaces))
         assert_equal(@xml, @document.to_xml)
+      end
+    end
+
+    context 'select sub-nodes' do
+
+      setup do
+        xml = <<-EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<boo:root xmlns:boo="boo.com" xmlns:zang="zang.com">
+  <boo:bam zang:zing="blamo">
+    <boo:target zang:zing="foo"/>
+    <boo:target zang:zing="bar"/>
+  </boo:bam>
+</boo:root>
+        EOF
+        @namespaces = {:boo => 'boo.com', :zang => 'zang.com'}
+        @document = Document.new(xml)
+      end
+
+      should 'allow xpaths after xpath' do
+        top_xpath = '//boo:target'
+        sub_xpath = './@zang:zing'
+        nodes = @document.xpath(top_xpath, @namespaces)
+        found_attributes  = []
+        nodes.each do |node|
+          found_attributes << node.xpath(sub_xpath, @namespaces)
+        end
+        found_attributes.flatten!
+        assert_equal(['foo', 'bar'], found_attributes.map(&:to_string))
       end
     end
 
@@ -350,7 +380,7 @@ EOF
   <boo:target />
 </boo:root>
         EOF
-        @namespaces = {boo: 'boo.com'}
+        @namespaces = {:boo => 'boo.com'}
         @document = Document.new(xml)
       end
 

@@ -98,17 +98,40 @@ module VtdXml
       return (fragment & 0b0000000000000000000000000000000011111111111111111111111111111111), (fragment >> 32)
     end
 
-    def search(xpath)
+    def search(xpath) 
       @pilot.select_xpath(xpath)
 
       results = []
       while (result = @pilot.eval_xpath()) != -1
-        results << text_for(result)
+        results << Node.new(result, @navigator, @pilot, @modifier)
       end
-      results
 
+      results
     ensure
       @pilot.reset_xpath
+    end
+
+    def clear_xpath_namespaces
+      begin
+        @pilot.clear_xpath_name_spaces()
+      rescue NullPointerException
+      end
+    end
+  end
+
+  class Node
+    include_package 'com.ximpleware'
+
+    def initialize(start_index, navigator, pilot, modifier)
+      @start_index = start_index
+      @navigator = navigator
+      @pilot = pilot
+      @modifier = modifier
+      @text_for = text_for(start_index)
+    end
+
+    def to_string
+      @text_for
     end
 
     # Beware of TCO!
@@ -129,12 +152,46 @@ module VtdXml
       end
     end
 
+    def search(xpath)
+      @navigator.recover_node(@start_index)
+
+      @pilot.select_xpath(xpath)
+
+      results = []
+      while (result = @pilot.eval_xpath()) != -1
+        results << Node.new(result, @navigator, @pilot, @modifier)
+      end
+
+      results
+    end
+
+    def xpath(*xpaths)
+      namespaces = Hash === xpaths.last ? xpaths.pop : {}
+      register_namespaces(namespaces)
+
+      results = xpaths.map { |xpath| search(xpath) }
+      results.flatten!
+      results.compact!
+      results
+
+    rescue XPathParseException => e
+      raise XPathError, '%s for xpath: %s' % [e.message, xpaths.inspect]
+    ensure
+      clear_xpath_namespaces
+    end
+
+    def register_namespaces(namespaces)
+      namespaces.each do |prefix, url|
+        @pilot.declare_xpath_name_space(prefix.to_s, url.to_s)
+      end
+    end
     def clear_xpath_namespaces
       begin
         @pilot.clear_xpath_name_spaces()
       rescue NullPointerException
       end
     end
+
   end
 end
 
