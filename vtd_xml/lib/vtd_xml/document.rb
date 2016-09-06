@@ -148,7 +148,7 @@ module VtdXml
     # Beware of TCO!
     def text_for(index)
       if index != -1
-        case @navigator.token_type(index)
+        case @navigator.get_token_type(index)
           when VTDGen::TOKEN_STARTING_TAG #element node
             text_for(@navigator.text())
           when VTDGen::TOKEN_ATTR_NAME #attribute node
